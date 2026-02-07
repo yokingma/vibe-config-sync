@@ -12,18 +12,23 @@ function isNonNullObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+const EXEC_TIMEOUT_MS = 30_000;
+
 function execClaude(args: string[]): boolean {
   try {
-    execFileSync('claude', args, { stdio: 'pipe' });
+    execFileSync('claude', args, { stdio: 'pipe', timeout: EXEC_TIMEOUT_MS });
     return true;
-  } catch {
+  } catch (err) {
+    if ((err as { killed?: boolean }).killed) {
+      logWarn(`Command timed out: claude ${args.join(' ')}`);
+    }
     return false;
   }
 }
 
 function isClaudeAvailable(): boolean {
   try {
-    execFileSync('claude', ['--version'], { stdio: 'pipe' });
+    execFileSync('claude', ['--version'], { stdio: 'pipe', timeout: 5_000 });
     return true;
   } catch {
     return false;

@@ -19,3 +19,4 @@ export function isInitialized(): boolean {
 
 export const SYNC_FILES = ['settings.json', 'CLAUDE.md'] as const;
 export const SYNC_DIRS = ['commands', 'agents'] as const;
+export const PLUGIN_FILES = ['installed_plugins.json', 'known_marketplaces.json'] as const;

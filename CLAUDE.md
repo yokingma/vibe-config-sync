@@ -40,23 +40,25 @@ CLI (src/index.ts - Commander)
 
 ### Core Modules
 
-- **config.ts** — Path constants, `SYNC_FILES` (`settings.json`, `CLAUDE.md`), `SYNC_DIRS` (`commands`, `agents`), `isInitialized()`
+- **config.ts** — Path constants, `SYNC_FILES` (`settings.json`, `CLAUDE.md`), `SYNC_DIRS` (`commands`, `agents`), `PLUGIN_FILES` (`installed_plugins.json`, `known_marketplaces.json`), `isInitialized()`
 - **fs-utils.ts** — `copyDirClean`, `removeDsStore`, `readJsonSafe`, `writeJsonSafe`
 - **git.ts** — `createGit`, `ensureGitRepo`, `commitAndPush`, `pullFromRemote` (wraps simple-git)
-- **plugins.ts** — Reinstalls plugins via `claude` CLI subprocess (`execFileSync`)
+- **plugins.ts** — Reinstalls plugins via `claude` CLI subprocess (`execFileSync`) with 30s timeout
 - **skills.ts** — Export/import skills directories; resolves symlinks to real files on export
 - **sanitize.ts** — Strips machine-specific paths (`installPath`, `installLocation`) from plugin/marketplace JSON
 - **diff.ts** — Shells out to `diff` command for status display
-- **backup.ts** — Creates timestamped backup of `~/.claude/` before import
+- **backup.ts** — Creates timestamped backup of `~/.claude/` before import; list/restore backups
+- **validate.ts** — JSON structure validation for settings, plugins, and marketplace files before import
 
 ### Commands
 
 - **init** — Create `~/.vibe-sync`, init git, optionally add remote
 - **export** — Copy + sanitize from `~/.claude/` to sync dir
-- **import** — Backup then restore from sync dir to `~/.claude/`, optional `--reinstall-plugins`
+- **import** — Backup then restore from sync dir to `~/.claude/`, optional `--reinstall-plugins`, `--dry-run` for preview
 - **status** — Show diff between local and synced configs
 - **push** — export + git commit + push
-- **pull** — git pull + import
+- **pull** — git pull + import (supports `--dry-run`)
+- **restore** — List available backups or restore `~/.claude/` from a specific backup
 
 ## Tech Stack
 
@@ -69,9 +71,8 @@ CLI (src/index.ts - Commander)
 
 ## Testing
 
-Tests live in `tests/*.test.ts`. Vitest globals are enabled (no need to import `describe`/`it`/`expect`). Tests use temp directories with `beforeEach`/`afterEach` cleanup. Current coverage is ~35% — core modules `config`, `fs-utils`, `sanitize`, `skills` are tested; commands, `git`, `plugins`, `diff`, `backup` are not.
+Tests live in `tests/*.test.ts`. Vitest globals are enabled (no need to import `describe`/`it`/`expect`). Tests use temp directories with `beforeEach`/`afterEach` cleanup. Core modules `config`, `fs-utils`, `sanitize`, `skills`, `backup`, `plugins`, `validate` are tested; commands, `git`, `diff` are not.
 
-## Known Issues (from CODE_REVIEW.md)
+## Known Issues
 
 - `process.exit()` used in library code, making it harder to test
-- No JSON schema validation on imported config files

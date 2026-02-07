@@ -59,10 +59,14 @@ vibe-sync pull --reinstall-plugins  # Pull, import, and reinstall plugins
 | `vibe-sync export` | Collect configs from `~/.claude/` into sync repo |
 | `vibe-sync import` | Restore configs from sync repo to `~/.claude/` |
 | `vibe-sync import --reinstall-plugins` | Restore + reinstall all plugins |
+| `vibe-sync import --dry-run` | Preview what would be imported without making changes |
 | `vibe-sync status` | Show diff between local and synced configs |
 | `vibe-sync push` | export + git commit + git push |
 | `vibe-sync pull` | git pull + import |
+| `vibe-sync pull --dry-run` | Preview what would be imported (skips git pull) |
 | `vibe-sync pull --reinstall-plugins` | git pull + import + reinstall all plugins |
+| `vibe-sync restore` | List available backups |
+| `vibe-sync restore <timestamp>` | Restore `~/.claude/` from a specific backup |
 
 ## Daily Workflow
 
@@ -78,9 +82,9 @@ vibe-sync pull
 
 - **Export** copies config files into `~/.vibe-sync/data/`, stripping machine-specific paths from plugin JSON files. Skills that are symlinks are resolved and their actual contents are copied.
 
-- **Import** restores files from `~/.vibe-sync/data/` to `~/.claude/`, and optionally reinstalls plugins via `claude plugin install`.
+- **Import** restores files from `~/.vibe-sync/data/` to `~/.claude/`, validating JSON structure before overwriting. Optionally reinstalls plugins via `claude plugin install`.
 
-- **Backup** is created automatically at `~/.vibe-sync/backups/claude/<timestamp>/` before every import.
+- **Backup** is created automatically at `~/.vibe-sync/backups/claude/<timestamp>/` before every import. Use `vibe-sync restore` to list or recover from backups.
 
 ## Sync Strategy
 

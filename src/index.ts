@@ -6,6 +6,7 @@ import { cmdStatus } from './commands/status.js';
 import { cmdPush } from './commands/push.js';
 import { cmdPull } from './commands/pull.js';
 import { cmdInit } from './commands/init.js';
+import { cmdRestore } from './commands/restore.js';
 import { logError } from './core/logger.js';
 
 const program = new Command();
@@ -13,7 +14,7 @@ const program = new Command();
 program
   .name('vibe-sync')
   .description('Sync AI coding tool configurations across machines via git')
-  .version('0.0.1')
+  .version('0.1.0')
   .action(async () => {
     if (!isInitialized()) {
       await cmdInit();
@@ -36,8 +37,9 @@ program
   .command('import')
   .description('Import configs from sync repo to ~/.claude/')
   .option('--reinstall-plugins', 'Reinstall plugins via claude CLI')
+  .option('--dry-run', 'Preview what would be imported without making changes')
   .action((opts) => {
-    cmdImport({ reinstallPlugins: opts.reinstallPlugins });
+    cmdImport({ reinstallPlugins: opts.reinstallPlugins, dryRun: opts.dryRun });
   });
 
 program
@@ -54,8 +56,16 @@ program
   .command('pull')
   .description('Git pull + import')
   .option('--reinstall-plugins', 'Reinstall plugins via claude CLI')
+  .option('--dry-run', 'Pull and preview what would be imported')
   .action(async (opts) => {
-    await cmdPull({ reinstallPlugins: opts.reinstallPlugins });
+    await cmdPull({ reinstallPlugins: opts.reinstallPlugins, dryRun: opts.dryRun });
+  });
+
+program
+  .command('restore [timestamp]')
+  .description('List backups or restore ~/.claude/ from a specific backup')
+  .action((timestamp) => {
+    cmdRestore(timestamp);
   });
 
 async function run() {
