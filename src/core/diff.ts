@@ -1,6 +1,46 @@
 import fs from 'fs-extra';
-import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { createTwoFilesPatch } from 'diff';
 import pc from 'picocolors';
+
+function readNormalized(filePath: string): string {
+  return fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
+}
+
+function filesEqual(a: string, b: string): boolean {
+  return readNormalized(a) === readNormalized(b);
+}
+
+function dirsEqual(a: string, b: string): boolean {
+  const aEntries = fs.readdirSync(a).sort();
+  const bEntries = fs.readdirSync(b).sort();
+  if (aEntries.length !== bEntries.length) return false;
+  for (let i = 0; i < aEntries.length; i++) {
+    if (aEntries[i] !== bEntries[i]) return false;
+    const aPath = path.join(a, aEntries[i]);
+    const bPath = path.join(b, bEntries[i]);
+    const aStat = fs.statSync(aPath);
+    const bStat = fs.statSync(bPath);
+    if (aStat.isDirectory() !== bStat.isDirectory()) return false;
+    const equal = aStat.isDirectory()
+      ? dirsEqual(aPath, bPath)
+      : filesEqual(aPath, bPath);
+    if (!equal) return false;
+  }
+  return true;
+}
+
+function colorDiff(patch: string): string {
+  return patch
+    .split('\n')
+    .map((line) => {
+      if (line.startsWith('+')) return pc.green(line);
+      if (line.startsWith('-')) return pc.red(line);
+      if (line.startsWith('@@')) return pc.cyan(line);
+      return line;
+    })
+    .join('\n');
+}
 
 export function showDiff(localPath: string, repoPath: string, label: string): boolean {
   if (!fs.existsSync(localPath) && !fs.existsSync(repoPath)) {
@@ -19,25 +59,21 @@ export function showDiff(localPath: string, repoPath: string, label: string): bo
 
   const isDir = fs.statSync(localPath).isDirectory();
 
-  try {
-    const args = isDir ? ['-rq', localPath, repoPath] : ['-q', localPath, repoPath];
-    execFileSync('diff', args, { stdio: 'pipe' });
-    return false;
-  } catch {
+  if (isDir) {
+    if (dirsEqual(localPath, repoPath)) return false;
     console.log(pc.yellow(`  ${label}: differs`));
-    if (!isDir) {
-      try {
-        const output = execFileSync(
-          'diff',
-          ['--color=auto', localPath, repoPath],
-          { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] },
-        );
-        if (output) console.log(output);
-      } catch (e: unknown) {
-        const err = e as { stdout?: string };
-        if (err.stdout) console.log(err.stdout);
-      }
-    }
     return true;
   }
+
+  const localContent = readNormalized(localPath);
+  const repoContent = readNormalized(repoPath);
+  if (localContent === repoContent) return false;
+
+  console.log(pc.yellow(`  ${label}: differs`));
+  const patch = createTwoFilesPatch(
+    `local/${label}`, `repo/${label}`,
+    localContent, repoContent,
+  );
+  console.log(colorDiff(patch));
+  return true;
 }

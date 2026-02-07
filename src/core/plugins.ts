@@ -21,26 +21,23 @@ function isNonNullObject(value: unknown): value is Record<string, unknown> {
 const EXEC_TIMEOUT_MS = 120_000;
 
 function execClaude(args: string[]): boolean {
-  try {
-    const result = spawnSync('claude', args, {
-      stdio: 'inherit',
-      timeout: EXEC_TIMEOUT_MS,
-    });
-    if (result.error) {
-      if ((result.error as NodeJS.ErrnoException).code === 'ETIMEDOUT') {
-        logWarn(`Command timed out (${EXEC_TIMEOUT_MS / 1000}s): claude ${args.join(' ')}`);
-      }
-      return false;
+  const result = spawnSync('claude', args, {
+    stdio: 'inherit',
+    timeout: EXEC_TIMEOUT_MS,
+    shell: true,
+  });
+  if (result.error) {
+    if ((result.error as NodeJS.ErrnoException).code === 'ETIMEDOUT') {
+      logWarn(`Command timed out (${EXEC_TIMEOUT_MS / 1000}s): claude ${args.join(' ')}`);
     }
-    return result.status === 0;
-  } catch {
     return false;
   }
+  return result.status === 0;
 }
 
 function isClaudeAvailable(): boolean {
   try {
-    execFileSync('claude', ['--version'], { stdio: 'pipe', timeout: 5_000 });
+    execFileSync('claude', ['--version'], { stdio: 'pipe', timeout: 5_000, shell: true });
     return true;
   } catch {
     return false;

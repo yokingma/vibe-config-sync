@@ -1,6 +1,6 @@
 {
   "name": "vibe-config-sync",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Cross-platform CLI tool to sync AI coding tool configurations across machines via git",
   "type": "module",
   "bin": {
@@ -30,11 +30,13 @@
   "license": "MIT",
   "dependencies": {
     "commander": "^13.1.0",
+    "diff": "^8.0.3",
     "fs-extra": "^11.2.0",
     "picocolors": "^1.1.1",
     "simple-git": "^3.27.0"
   },
   "devDependencies": {
+    "@types/diff": "^7.0.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.10.0",
     "tsup": "^8.3.0",

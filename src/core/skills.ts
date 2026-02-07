@@ -16,10 +16,19 @@ export function exportSkills(srcDir: string, destDir: string): void {
     const name = entry.name;
     const fullPath = path.join(srcDir, name);
     if (entry.isSymbolicLink()) {
-      // Resolve symlink and copy actual files
-      const realPath = fs.realpathSync(fullPath);
-      copyDirClean(realPath, path.join(destDir, name));
-      logInfo(`Exported skill (resolved symlink): ${name}`);
+      try {
+        const realPath = fs.realpathSync(fullPath);
+        copyDirClean(realPath, path.join(destDir, name));
+        logInfo(`Exported skill (resolved symlink): ${name}`);
+      } catch {
+        // Fallback: if symlink resolution fails, try copying directly
+        if (fs.existsSync(fullPath)) {
+          copyDirClean(fullPath, path.join(destDir, name));
+          logWarn(`Exported skill (symlink fallback copy): ${name}`);
+        } else {
+          logWarn(`Skipped broken symlink: ${name}`);
+        }
+      }
     } else if (entry.isDirectory()) {
       copyDirClean(fullPath, path.join(destDir, name));
       logInfo(`Exported skill: ${name}`);

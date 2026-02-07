@@ -4,18 +4,20 @@ import { logWarn } from './logger.js';
 
 export function copyDirClean(src: string, dest: string): void {
   fs.copySync(src, dest, { overwrite: true });
-  removeDsStore(dest);
+  removeOsArtifacts(dest);
 }
 
-export function removeDsStore(dir: string): void {
+const OS_ARTIFACTS = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
+
+export function removeOsArtifacts(dir: string): void {
   if (!fs.existsSync(dir)) return;
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    if (entry.name === '.DS_Store') {
+    if (OS_ARTIFACTS.has(entry.name)) {
       fs.removeSync(fullPath);
     } else if (entry.isDirectory() && !entry.isSymbolicLink()) {
-      removeDsStore(fullPath);
+      removeOsArtifacts(fullPath);
     }
   }
 }

@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {
   copyDirClean,
-  removeDsStore,
+  removeOsArtifacts,
   readJsonSafe,
   writeJsonSafe,
 } from '../src/core/fs-utils.js';
@@ -19,7 +19,7 @@ afterEach(() => {
   fs.removeSync(TEST_DIR);
 });
 
-describe('removeDsStore', () => {
+describe('removeOsArtifacts', () => {
   it('should remove .DS_Store files recursively', () => {
     const subDir = path.join(TEST_DIR, 'sub');
     fs.ensureDirSync(subDir);
@@ -27,21 +27,33 @@ describe('removeDsStore', () => {
     fs.writeFileSync(path.join(subDir, '.DS_Store'), '');
     fs.writeFileSync(path.join(subDir, 'keep.txt'), 'keep');
 
-    removeDsStore(TEST_DIR);
+    removeOsArtifacts(TEST_DIR);
 
     expect(fs.existsSync(path.join(TEST_DIR, '.DS_Store'))).toBe(false);
     expect(fs.existsSync(path.join(subDir, '.DS_Store'))).toBe(false);
     expect(fs.existsSync(path.join(subDir, 'keep.txt'))).toBe(true);
   });
 
+  it('should remove Thumbs.db and desktop.ini', () => {
+    fs.writeFileSync(path.join(TEST_DIR, 'Thumbs.db'), '');
+    fs.writeFileSync(path.join(TEST_DIR, 'desktop.ini'), '');
+    fs.writeFileSync(path.join(TEST_DIR, 'keep.txt'), 'keep');
+
+    removeOsArtifacts(TEST_DIR);
+
+    expect(fs.existsSync(path.join(TEST_DIR, 'Thumbs.db'))).toBe(false);
+    expect(fs.existsSync(path.join(TEST_DIR, 'desktop.ini'))).toBe(false);
+    expect(fs.existsSync(path.join(TEST_DIR, 'keep.txt'))).toBe(true);
+  });
+
   it('should handle nonexistent directory', () => {
-    removeDsStore('/nonexistent/path');
+    removeOsArtifacts('/nonexistent/path');
     // Should not throw
   });
 });
 
 describe('copyDirClean', () => {
-  it('should copy directory and remove .DS_Store', () => {
+  it('should copy directory and remove OS artifacts', () => {
     const src = path.join(TEST_DIR, 'src');
     const dest = path.join(TEST_DIR, 'dest');
     fs.ensureDirSync(src);
