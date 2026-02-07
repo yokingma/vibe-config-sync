@@ -14,7 +14,7 @@ const program = new Command();
 program
   .name('vibe-sync')
   .description('Sync AI coding tool configurations across machines via git')
-  .version('0.1.0')
+  .version('0.2.0')
   .action(async () => {
     if (!isInitialized()) {
       await cmdInit();
@@ -36,10 +36,10 @@ program
 program
   .command('import')
   .description('Import configs from sync repo to ~/.claude/')
-  .option('--reinstall-plugins', 'Reinstall plugins via claude CLI')
+  .option('--no-plugins', 'Skip plugin sync')
   .option('--dry-run', 'Preview what would be imported without making changes')
   .action((opts) => {
-    cmdImport({ reinstallPlugins: opts.reinstallPlugins, dryRun: opts.dryRun });
+    cmdImport({ reinstallPlugins: opts.plugins, dryRun: opts.dryRun });
   });
 
 program
@@ -55,10 +55,10 @@ program
 program
   .command('pull')
   .description('Git pull + import')
-  .option('--reinstall-plugins', 'Reinstall plugins via claude CLI')
+  .option('--no-plugins', 'Skip plugin sync')
   .option('--dry-run', 'Pull and preview what would be imported')
   .action(async (opts) => {
-    await cmdPull({ reinstallPlugins: opts.reinstallPlugins, dryRun: opts.dryRun });
+    await cmdPull({ reinstallPlugins: opts.plugins, dryRun: opts.dryRun });
   });
 
 program

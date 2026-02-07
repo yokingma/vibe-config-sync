@@ -28,7 +28,7 @@ CLI (src/index.ts - Commander)
 
 **Data flow:**
 - Export: `~/.claude/` → sanitize → `~/.vibe-sync/data/` → git push
-- Import: git pull → `~/.vibe-sync/data/` → backup → restore → `~/.claude/`
+- Import: git pull → `~/.vibe-sync/data/` → backup → restore → `~/.claude/` (plugin JSON used as manifest only, not copied)
 
 ### Key Paths (defined in `src/core/config.ts`)
 
@@ -43,7 +43,7 @@ CLI (src/index.ts - Commander)
 - **config.ts** — Path constants, `SYNC_FILES` (`settings.json`, `CLAUDE.md`), `SYNC_DIRS` (`commands`, `agents`), `PLUGIN_FILES` (`installed_plugins.json`, `known_marketplaces.json`), `isInitialized()`
 - **fs-utils.ts** — `copyDirClean`, `removeDsStore`, `readJsonSafe`, `writeJsonSafe`
 - **git.ts** — `createGit`, `ensureGitRepo`, `commitAndPush`, `pullFromRemote` (wraps simple-git)
-- **plugins.ts** — Reinstalls plugins via `claude` CLI subprocess (`execFileSync`) with 30s timeout
+- **plugins.ts** — Reinstalls plugins via `claude` CLI subprocess (`spawnSync` with `stdio: 'inherit'` for progress output, 120s timeout). Reads sync'd plugin JSON as manifest (never copies sanitized files to `~/.claude/`). Skips already-installed marketplaces, plugins (by `installPath`), and enabled plugins via `ExistingPluginState`.
 - **skills.ts** — Export/import skills directories; resolves symlinks to real files on export
 - **sanitize.ts** — Strips machine-specific paths (`installPath`, `installLocation`) from plugin/marketplace JSON
 - **diff.ts** — Shells out to `diff` command for status display
@@ -54,10 +54,10 @@ CLI (src/index.ts - Commander)
 
 - **init** — Create `~/.vibe-sync`, init git, optionally add remote
 - **export** — Copy + sanitize from `~/.claude/` to sync dir
-- **import** — Backup then restore from sync dir to `~/.claude/`, optional `--reinstall-plugins`, `--dry-run` for preview
+- **import** — Backup then restore from sync dir to `~/.claude/`, plugins synced by default (skip with `--no-plugins`), `--dry-run` for preview
 - **status** — Show diff between local and synced configs
 - **push** — export + git commit + push
-- **pull** — git pull + import (supports `--dry-run`)
+- **pull** — git pull + import, plugins synced by default (skip with `--no-plugins`), `--dry-run` for preview
 - **restore** — List available backups or restore `~/.claude/` from a specific backup
 
 ## Tech Stack

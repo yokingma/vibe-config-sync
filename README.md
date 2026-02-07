@@ -26,7 +26,7 @@ When using AI coding tools on multiple machines, configurations like skills, com
 
 - Node.js 18+
 - `git`
-- `claude` CLI (only needed for `--reinstall-plugins`)
+- `claude` CLI (for plugin sync; installed automatically with Claude Code)
 
 ## Installation
 
@@ -47,8 +47,8 @@ vibe-sync push          # Export configs and push to remote
 
 ```bash
 vibe-sync init                      # Initialize and pull from remote
-vibe-sync pull                      # Pull and import configs
-vibe-sync pull --reinstall-plugins  # Pull, import, and reinstall plugins
+vibe-sync pull                      # Pull, import configs, and sync plugins
+vibe-sync pull --no-plugins         # Pull and import configs only (skip plugins)
 ```
 
 ## Commands
@@ -57,14 +57,14 @@ vibe-sync pull --reinstall-plugins  # Pull, import, and reinstall plugins
 |---------|-------------|
 | `vibe-sync init` | Initialize sync repository and connect to Git remote |
 | `vibe-sync export` | Collect configs from `~/.claude/` into sync repo |
-| `vibe-sync import` | Restore configs from sync repo to `~/.claude/` |
-| `vibe-sync import --reinstall-plugins` | Restore + reinstall all plugins |
+| `vibe-sync import` | Restore configs from sync repo to `~/.claude/` (includes plugin sync) |
+| `vibe-sync import --no-plugins` | Restore configs only, skip plugin sync |
 | `vibe-sync import --dry-run` | Preview what would be imported without making changes |
 | `vibe-sync status` | Show diff between local and synced configs |
 | `vibe-sync push` | export + git commit + git push |
-| `vibe-sync pull` | git pull + import |
+| `vibe-sync pull` | git pull + import (includes plugin sync) |
+| `vibe-sync pull --no-plugins` | git pull + import, skip plugin sync |
 | `vibe-sync pull --dry-run` | Preview what would be imported (skips git pull) |
-| `vibe-sync pull --reinstall-plugins` | git pull + import + reinstall all plugins |
 | `vibe-sync restore` | List available backups |
 | `vibe-sync restore <timestamp>` | Restore `~/.claude/` from a specific backup |
 
@@ -82,7 +82,7 @@ vibe-sync pull
 
 - **Export** copies config files into `~/.vibe-sync/data/`, stripping machine-specific paths from plugin JSON files. Skills that are symlinks are resolved and their actual contents are copied.
 
-- **Import** restores files from `~/.vibe-sync/data/` to `~/.claude/`, validating JSON structure before overwriting. Optionally reinstalls plugins via `claude plugin install`.
+- **Import** restores files from `~/.vibe-sync/data/` to `~/.claude/`, validating JSON structure before overwriting. Plugin JSON files are used as a manifest only (never copied directly) — the `claude` CLI installs plugins and writes correct registry files with local paths. Already-installed plugins are detected and skipped.
 
 - **Backup** is created automatically at `~/.vibe-sync/backups/claude/<timestamp>/` before every import. Use `vibe-sync restore` to list or recover from backups.
 
@@ -114,7 +114,7 @@ In short: new content is added, existing content is overwritten, but nothing is 
 
 ### Plugin JSON
 
-Whole-file overwrite, same as `settings.json`. No key-level merge between local and repo versions.
+Plugin JSON files (`installed_plugins.json`, `known_marketplaces.json`) are exported with machine-specific paths stripped. On import, they are **not** copied to `~/.claude/plugins/` — instead they serve as a manifest. The `claude` CLI is invoked to install each plugin, and it writes correct registry files with local paths as a side effect. Already-installed plugins (detected by `installPath`) are skipped to avoid redundant network operations.
 
 ### What This Means in Practice
 
