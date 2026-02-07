@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'node:path';
-import { CLAUDE_HOME, getConfigDir, getExternalSkillsFile, SYNC_FILES, SYNC_DIRS } from '../core/config.js';
-import { logInfo, logOk, logWarn, logError } from '../core/logger.js';
+import { CLAUDE_HOME, getConfigDir, SYNC_FILES, SYNC_DIRS } from '../core/config.js';
+import { logInfo, logOk, logWarn } from '../core/logger.js';
 import { backupExisting } from '../core/backup.js';
 import { importSkills } from '../core/skills.js';
 import { reinstallPlugins } from '../core/plugins.js';
@@ -14,9 +14,9 @@ export function cmdImport(options: ImportOptions = {}): void {
   const configDir = getConfigDir();
 
   if (!fs.existsSync(configDir)) {
-    logError(`Config directory not found: ${configDir}`);
-    logError('Run "vibe-sync export" first or "vibe-sync pull"');
-    process.exit(1);
+    throw new Error(
+      `Config directory not found: ${configDir}\nRun "vibe-sync export" first or "vibe-sync pull"`,
+    );
   }
 
   // Create backup
@@ -45,7 +45,6 @@ export function cmdImport(options: ImportOptions = {}): void {
   importSkills(
     path.join(configDir, 'skills'),
     path.join(CLAUDE_HOME, 'skills'),
-    getExternalSkillsFile(),
   );
 
   // Restore plugin registries

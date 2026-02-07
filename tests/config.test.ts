@@ -18,11 +18,9 @@ describe('config', () => {
     expect(getConfigDir()).toBe(path.join(SYNC_DIR, 'data'));
   });
 
-  it('getExternalSkillsFile returns SYNC_DIR/data/external-skills.json', async () => {
-    const { getExternalSkillsFile, SYNC_DIR } = await import('../src/core/config.js');
-    expect(getExternalSkillsFile()).toBe(
-      path.join(SYNC_DIR, 'data', 'external-skills.json'),
-    );
+  it('BACKUP_BASE is under SYNC_DIR/backups/claude', async () => {
+    const { BACKUP_BASE, SYNC_DIR } = await import('../src/core/config.js');
+    expect(BACKUP_BASE).toBe(path.join(SYNC_DIR, 'backups', 'claude'));
   });
 
   it('SYNC_FILES contains expected files', async () => {

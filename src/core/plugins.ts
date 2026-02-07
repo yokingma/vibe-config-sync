@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { logInfo, logOk, logWarn, logError } from './logger.js';
 import { readJsonSafe } from './fs-utils.js';
 import type { PluginsData, MarketplacesData } from './sanitize.js';
@@ -8,9 +8,13 @@ interface SettingsData {
   [key: string]: unknown;
 }
 
-function execClaude(args: string): boolean {
+function isNonNullObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function execClaude(args: string[]): boolean {
   try {
-    execSync(`claude ${args}`, { stdio: 'pipe' });
+    execFileSync('claude', args, { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -19,7 +23,7 @@ function execClaude(args: string): boolean {
 
 function isClaudeAvailable(): boolean {
   try {
-    execSync('claude --version', { stdio: 'pipe' });
+    execFileSync('claude', ['--version'], { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -39,10 +43,11 @@ export function reinstallPlugins(
   // Phase 1: Add marketplaces
   logInfo('Phase 1: Adding plugin marketplaces...');
   const marketplaces = readJsonSafe<MarketplacesData>(marketplacesFile);
-  if (marketplaces) {
+  if (isNonNullObject(marketplaces)) {
     for (const [name, entry] of Object.entries(marketplaces)) {
+      if (!isNonNullObject(entry)) continue;
       const source = entry.source;
-      if (!source) continue;
+      if (!isNonNullObject(source)) continue;
 
       let arg: string;
       if (source.source === 'github' && source.repo) {
@@ -54,7 +59,7 @@ export function reinstallPlugins(
         continue;
       }
 
-      if (execClaude(`plugin marketplace add "${arg}"`)) {
+      if (execClaude(['plugin', 'marketplace', 'add', arg])) {
         logOk(`Added marketplace: ${name}`);
       } else {
         logWarn(`Failed to add marketplace: ${name}`);
@@ -65,9 +70,9 @@ export function reinstallPlugins(
   // Phase 2: Install plugins
   logInfo('Phase 2: Installing plugins...');
   const plugins = readJsonSafe<PluginsData>(pluginsFile);
-  if (plugins?.plugins) {
+  if (isNonNullObject(plugins) && isNonNullObject(plugins.plugins)) {
     for (const key of Object.keys(plugins.plugins)) {
-      if (execClaude(`plugin install "${key}"`)) {
+      if (execClaude(['plugin', 'install', key])) {
         logOk(`Installed plugin: ${key}`);
       } else {
         logWarn(`Failed to install plugin: ${key}`);
@@ -78,10 +83,10 @@ export function reinstallPlugins(
   // Phase 3: Enable plugins
   logInfo('Phase 3: Enabling plugins...');
   const settings = readJsonSafe<SettingsData>(settingsFile);
-  if (settings?.enabledPlugins) {
+  if (isNonNullObject(settings) && isNonNullObject(settings.enabledPlugins)) {
     for (const [key, enabled] of Object.entries(settings.enabledPlugins)) {
       if (!enabled) continue;
-      if (execClaude(`plugin enable "${key}"`)) {
+      if (execClaude(['plugin', 'enable', key])) {
         logOk(`Enabled plugin: ${key}`);
       } else {
         logWarn(`Failed to enable plugin: ${key}`);

@@ -1,0 +1,77 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**vibe-config-sync** (command: `vibe-sync`) is a CLI tool that synchronizes Claude Code (`~/.claude/`) configurations across machines via Git. It exports, imports, and diffs settings, skills, commands, agents, and plugin registries between `~/.claude/` and a `~/.vibe-sync/` Git repository.
+
+## Commands
+
+```bash
+npm run build          # Build with tsup → dist/index.js (ESM, Node 18+)
+npm run dev            # Build in watch mode
+npm run test           # Run all tests (vitest)
+npm run test:watch     # Run tests in watch mode
+npx vitest run tests/sanitize.test.ts   # Run a single test file
+npm run lint           # Type-check only (tsc --noEmit), no ESLint
+```
+
+## Architecture
+
+```
+CLI (src/index.ts - Commander)
+  → Commands (src/commands/*.ts)
+    → Core modules (src/core/*.ts)
+      → External: fs-extra, simple-git, child_process
+```
+
+**Data flow:**
+- Export: `~/.claude/` → sanitize → `~/.vibe-sync/data/` → git push
+- Import: git pull → `~/.vibe-sync/data/` → backup → restore → `~/.claude/`
+
+### Key Paths (defined in `src/core/config.ts`)
+
+| Constant | Default | Purpose |
+|----------|---------|---------|
+| `CLAUDE_HOME` | `~/.claude` | Source config dir (overridable via `CLAUDE_HOME` env var) |
+| `SYNC_DIR` | `~/.vibe-sync` | Git-backed sync repository |
+| `BACKUP_BASE` | `~/.vibe-sync/backups/claude` | Timestamped backups before import |
+
+### Core Modules
+
+- **config.ts** — Path constants, `SYNC_FILES` (`settings.json`, `CLAUDE.md`), `SYNC_DIRS` (`commands`, `agents`), `isInitialized()`
+- **fs-utils.ts** — `copyDirClean`, `removeDsStore`, `readJsonSafe`, `writeJsonSafe`
+- **git.ts** — `createGit`, `ensureGitRepo`, `commitAndPush`, `pullFromRemote` (wraps simple-git)
+- **plugins.ts** — Reinstalls plugins via `claude` CLI subprocess (`execFileSync`)
+- **skills.ts** — Export/import skills directories; resolves symlinks to real files on export
+- **sanitize.ts** — Strips machine-specific paths (`installPath`, `installLocation`) from plugin/marketplace JSON
+- **diff.ts** — Shells out to `diff` command for status display
+- **backup.ts** — Creates timestamped backup of `~/.claude/` before import
+
+### Commands
+
+- **init** — Create `~/.vibe-sync`, init git, optionally add remote
+- **export** — Copy + sanitize from `~/.claude/` to sync dir
+- **import** — Backup then restore from sync dir to `~/.claude/`, optional `--reinstall-plugins`
+- **status** — Show diff between local and synced configs
+- **push** — export + git commit + push
+- **pull** — git pull + import
+
+## Tech Stack
+
+- TypeScript strict mode, ES Modules (`"type": "module"`)
+- Build: tsup (ESM, target node18, shebang injected)
+- Test: Vitest with globals enabled
+- CLI: Commander.js
+- Git: simple-git
+- FS: fs-extra
+
+## Testing
+
+Tests live in `tests/*.test.ts`. Vitest globals are enabled (no need to import `describe`/`it`/`expect`). Tests use temp directories with `beforeEach`/`afterEach` cleanup. Current coverage is ~35% — core modules `config`, `fs-utils`, `sanitize`, `skills` are tested; commands, `git`, `plugins`, `diff`, `backup` are not.
+
+## Known Issues (from CODE_REVIEW.md)
+
+- `process.exit()` used in library code, making it harder to test
+- No JSON schema validation on imported config files

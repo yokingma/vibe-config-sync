@@ -5,16 +5,12 @@ import path from 'node:path';
 export const CLAUDE_HOME = process.env.CLAUDE_HOME
   ?? path.join(os.homedir(), '.claude');
 
-export const BACKUP_BASE = path.join(os.homedir(), '.claude-backup');
-
 export const SYNC_DIR = path.join(os.homedir(), '.vibe-sync');
+
+export const BACKUP_BASE = path.join(SYNC_DIR, 'backups', 'claude');
 
 export function getConfigDir(): string {
   return path.join(SYNC_DIR, 'data');
-}
-
-export function getExternalSkillsFile(): string {
-  return path.join(SYNC_DIR, 'data', 'external-skills.json');
 }
 
 export function isInitialized(): boolean {

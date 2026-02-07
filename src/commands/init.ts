@@ -14,16 +14,39 @@ function createReadline() {
 
 export async function cmdInit(): Promise<void> {
   if (isInitialized()) {
-    logOk('Already initialized at ' + SYNC_DIR);
     const git = createGit(SYNC_DIR);
-    if (await hasRemote(git)) {
-      const remotes = await git.getRemotes(true);
-      const origin = remotes.find((r) => r.name === 'origin');
-      if (origin) {
-        logInfo(`Remote: ${origin.refs.fetch}`);
-      }
+    const remotes = await git.getRemotes(true);
+    const origin = remotes.find((r) => r.name === 'origin');
+
+    if (origin) {
+      logInfo(`Current remote: ${origin.refs.fetch}`);
     } else {
       logWarn('No remote configured');
+    }
+
+    const rl = createReadline();
+    try {
+      const url = await rl.question('? New Git remote URL (leave empty to keep current): ');
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) {
+        logInfo('Remote unchanged');
+        return;
+      }
+
+      const gitUrlPattern = /^(https?:\/\/|git@|ssh:\/\/|git:\/\/).+/;
+      if (!gitUrlPattern.test(trimmedUrl)) {
+        logError('Invalid Git URL format. Expected https://, git@, ssh://, or git:// URL');
+        return;
+      }
+
+      if (origin) {
+        await git.remote(['set-url', 'origin', trimmedUrl]);
+      } else {
+        await git.addRemote('origin', trimmedUrl);
+      }
+      logOk(`Remote updated: ${trimmedUrl}`);
+    } finally {
+      rl.close();
     }
     return;
   }
@@ -37,8 +60,15 @@ export async function cmdInit(): Promise<void> {
   try {
     const url = await rl.question('? Git remote URL: ');
 
-    if (!url.trim()) {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
       logError('URL cannot be empty');
+      return;
+    }
+
+    const gitUrlPattern = /^(https?:\/\/|git@|ssh:\/\/|git:\/\/).+/;
+    if (!gitUrlPattern.test(trimmedUrl)) {
+      logError('Invalid Git URL format. Expected https://, git@, ssh://, or git:// URL');
       return;
     }
 
@@ -54,8 +84,8 @@ export async function cmdInit(): Promise<void> {
     await git.init();
     logOk('Initialized git repository');
 
-    await git.addRemote('origin', url.trim());
-    logOk(`Remote added: ${url.trim()}`);
+    await git.addRemote('origin', trimmedUrl);
+    logOk(`Remote added: ${trimmedUrl}`);
 
     // Try to pull existing data
     try {

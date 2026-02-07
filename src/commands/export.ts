@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'node:path';
-import { CLAUDE_HOME, getConfigDir, getExternalSkillsFile, SYNC_FILES, SYNC_DIRS } from '../core/config.js';
+import { CLAUDE_HOME, getConfigDir, SYNC_FILES, SYNC_DIRS } from '../core/config.js';
 import { logInfo, logOk, logWarn } from '../core/logger.js';
 import { copyDirClean, readJsonSafe, writeJsonSafe } from '../core/fs-utils.js';
 import { sanitizePlugins, sanitizeMarketplaces } from '../core/sanitize.js';
@@ -38,7 +38,6 @@ export function cmdExport(): void {
   exportSkills(
     path.join(CLAUDE_HOME, 'skills'),
     path.join(configDir, 'skills'),
-    getExternalSkillsFile(),
   );
 
   // Sanitize and export plugin registries

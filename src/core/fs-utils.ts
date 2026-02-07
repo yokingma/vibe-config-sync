@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'node:path';
+import { logWarn } from './logger.js';
 
 export function copyDirClean(src: string, dest: string): void {
   fs.copySync(src, dest, { overwrite: true });
@@ -13,7 +14,7 @@ export function removeDsStore(dir: string): void {
     const fullPath = path.join(dir, entry.name);
     if (entry.name === '.DS_Store') {
       fs.removeSync(fullPath);
-    } else if (entry.isDirectory()) {
+    } else if (entry.isDirectory() && !entry.isSymbolicLink()) {
       removeDsStore(fullPath);
     }
   }
@@ -22,7 +23,11 @@ export function removeDsStore(dir: string): void {
 export function readJsonSafe<T = unknown>(filePath: string): T | null {
   try {
     return fs.readJsonSync(filePath) as T;
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== 'ENOENT') {
+      logWarn(`Failed to parse ${filePath}: ${(err as Error).message}`);
+    }
     return null;
   }
 }

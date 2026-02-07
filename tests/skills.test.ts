@@ -8,7 +8,6 @@ const TEST_DIR = path.join(os.tmpdir(), 'vibe-sync-test-skills');
 const SRC_DIR = path.join(TEST_DIR, 'src-skills');
 const DEST_DIR = path.join(TEST_DIR, 'dest-skills');
 const IMPORT_DIR = path.join(TEST_DIR, 'import-skills');
-const EXT_FILE = path.join(TEST_DIR, 'external-skills.json');
 
 beforeEach(() => {
   fs.ensureDirSync(TEST_DIR);
@@ -27,30 +26,29 @@ describe('exportSkills', () => {
     fs.ensureDirSync(skillDir);
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# My Skill');
 
-    exportSkills(SRC_DIR, DEST_DIR, EXT_FILE);
+    exportSkills(SRC_DIR, DEST_DIR);
 
     expect(fs.existsSync(path.join(DEST_DIR, 'my-skill', 'SKILL.md'))).toBe(true);
   });
 
-  it('should record symlinks in external-skills.json', () => {
-    // Create a real target directory
+  it('should resolve symlinks and copy actual files', () => {
     const targetDir = path.join(TEST_DIR, 'external-target');
     fs.ensureDirSync(targetDir);
     fs.writeFileSync(path.join(targetDir, 'SKILL.md'), '# External');
 
-    // Create symlink in source
     fs.symlinkSync(targetDir, path.join(SRC_DIR, 'linked-skill'));
 
-    exportSkills(SRC_DIR, DEST_DIR, EXT_FILE);
+    exportSkills(SRC_DIR, DEST_DIR);
 
-    const data = fs.readJsonSync(EXT_FILE);
-    expect(data.symlinks).toHaveLength(1);
-    expect(data.symlinks[0].name).toBe('linked-skill');
-    expect(data.symlinks[0].target).toBe(targetDir);
+    // Should be a real directory, not a symlink
+    const exported = path.join(DEST_DIR, 'linked-skill');
+    expect(fs.existsSync(path.join(exported, 'SKILL.md'))).toBe(true);
+    expect(fs.lstatSync(exported).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(path.join(exported, 'SKILL.md'), 'utf-8')).toBe('# External');
   });
 
   it('should handle missing source directory', () => {
-    exportSkills('/nonexistent/path', DEST_DIR, EXT_FILE);
+    exportSkills('/nonexistent/path', DEST_DIR);
     // Should not throw
   });
 
@@ -60,7 +58,7 @@ describe('exportSkills', () => {
     fs.writeFileSync(path.join(skillDir, '.DS_Store'), '');
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# Skill');
 
-    exportSkills(SRC_DIR, DEST_DIR, EXT_FILE);
+    exportSkills(SRC_DIR, DEST_DIR);
 
     expect(fs.existsSync(path.join(DEST_DIR, 'my-skill', '.DS_Store'))).toBe(false);
     expect(fs.existsSync(path.join(DEST_DIR, 'my-skill', 'SKILL.md'))).toBe(true);
@@ -73,38 +71,13 @@ describe('importSkills', () => {
     fs.ensureDirSync(skillDir);
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# My Skill');
 
-    // No external skills file
-    importSkills(DEST_DIR, IMPORT_DIR, EXT_FILE);
+    importSkills(DEST_DIR, IMPORT_DIR);
 
     expect(fs.existsSync(path.join(IMPORT_DIR, 'my-skill', 'SKILL.md'))).toBe(true);
   });
 
-  it('should recreate symlinks from external-skills.json', () => {
-    // Create target directory
-    const targetDir = path.join(TEST_DIR, 'external-target');
-    fs.ensureDirSync(targetDir);
-    fs.writeFileSync(path.join(targetDir, 'SKILL.md'), '# External');
-
-    // Write external skills file
-    fs.writeJsonSync(EXT_FILE, {
-      symlinks: [{ name: 'linked-skill', target: targetDir }],
-    });
-
-    fs.ensureDirSync(IMPORT_DIR);
-    importSkills(DEST_DIR, IMPORT_DIR, EXT_FILE);
-
-    const linkPath = path.join(IMPORT_DIR, 'linked-skill');
-    expect(fs.lstatSync(linkPath).isSymbolicLink()).toBe(true);
-  });
-
-  it('should warn and skip when symlink target is missing', () => {
-    fs.writeJsonSync(EXT_FILE, {
-      symlinks: [{ name: 'missing-skill', target: '/nonexistent/path' }],
-    });
-
-    fs.ensureDirSync(IMPORT_DIR);
-    importSkills(DEST_DIR, IMPORT_DIR, EXT_FILE);
-
-    expect(fs.existsSync(path.join(IMPORT_DIR, 'missing-skill'))).toBe(false);
+  it('should handle missing source directory', () => {
+    importSkills('/nonexistent/path', IMPORT_DIR);
+    // Should not throw
   });
 });

@@ -1,5 +1,5 @@
 import { simpleGit, type SimpleGit } from 'simple-git';
-import { logInfo, logWarn, logOk, logError } from './logger.js';
+import { logInfo, logWarn, logOk } from './logger.js';
 
 export function createGit(baseDir: string): SimpleGit {
   return simpleGit({ baseDir });
@@ -31,28 +31,27 @@ export async function commitAndPush(
   const status = await git.status();
   if (status.isClean()) {
     logInfo('No changes to commit');
-    return false;
+  } else {
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_');
+    const msg = `sync: update claude configs ${timestamp}`;
+    await git.commit(msg);
+    logOk(`Committed: ${msg}`);
   }
 
-  const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_');
-  const msg = `sync: update claude configs ${timestamp}`;
-  await git.commit(msg);
-  logOk(`Committed: ${msg}`);
-
   if (await hasRemote(git)) {
-    await git.push();
+    const branch = (await git.branchLocal()).current || 'main';
+    await git.push(['-u', 'origin', branch]);
     logOk('Pushed to remote');
   } else {
     logWarn('No remote configured. Run: git remote add origin <url>');
   }
 
-  return true;
+  return !status.isClean();
 }
 
 export async function pullFromRemote(git: SimpleGit): Promise<void> {
   if (!(await hasRemote(git))) {
-    logError('No remote configured. Run: git remote add origin <url>');
-    process.exit(1);
+    throw new Error('No remote configured. Run: git remote add origin <url>');
   }
   await git.pull();
   logOk('Pulled from remote');

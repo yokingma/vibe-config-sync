@@ -6,13 +6,14 @@ import { cmdStatus } from './commands/status.js';
 import { cmdPush } from './commands/push.js';
 import { cmdPull } from './commands/pull.js';
 import { cmdInit } from './commands/init.js';
+import { logError } from './core/logger.js';
 
 const program = new Command();
 
 program
   .name('vibe-sync')
   .description('Sync AI coding tool configurations across machines via git')
-  .version('1.0.0')
+  .version('0.0.1')
   .action(async () => {
     if (!isInitialized()) {
       await cmdInit();
@@ -24,16 +25,12 @@ program
 program
   .command('init')
   .description('Initialize sync repository')
-  .action(async () => {
-    await cmdInit();
-  });
+  .action(cmdInit);
 
 program
   .command('export')
   .description('Export configs from ~/.claude/ to sync repo')
-  .action(() => {
-    cmdExport();
-  });
+  .action(cmdExport);
 
 program
   .command('import')
@@ -46,16 +43,12 @@ program
 program
   .command('status')
   .description('Show diff between local and synced configs')
-  .action(() => {
-    cmdStatus();
-  });
+  .action(cmdStatus);
 
 program
   .command('push')
   .description('Export + git commit + git push')
-  .action(async () => {
-    await cmdPush();
-  });
+  .action(cmdPush);
 
 program
   .command('pull')
@@ -65,4 +58,13 @@ program
     await cmdPull({ reinstallPlugins: opts.reinstallPlugins });
   });
 
-program.parse();
+async function run() {
+  try {
+    await program.parseAsync();
+  } catch (err: unknown) {
+    logError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    process.exit(1);
+  }
+}
+
+run();

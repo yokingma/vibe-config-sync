@@ -1,8 +1,6 @@
 import fs from 'fs-extra';
-import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import pc from 'picocolors';
-import { logInfo, logOk } from './logger.js';
 
 export function showDiff(localPath: string, repoPath: string, label: string): boolean {
   if (!fs.existsSync(localPath) && !fs.existsSync(repoPath)) {
@@ -22,15 +20,16 @@ export function showDiff(localPath: string, repoPath: string, label: string): bo
   const isDir = fs.statSync(localPath).isDirectory();
 
   try {
-    const args = isDir ? '-rq' : '-q';
-    execSync(`diff ${args} "${localPath}" "${repoPath}"`, { stdio: 'pipe' });
+    const args = isDir ? ['-rq', localPath, repoPath] : ['-q', localPath, repoPath];
+    execFileSync('diff', args, { stdio: 'pipe' });
     return false;
   } catch {
     console.log(pc.yellow(`  ${label}: differs`));
     if (!isDir) {
       try {
-        const output = execSync(
-          `diff --color=auto "${localPath}" "${repoPath}"`,
+        const output = execFileSync(
+          'diff',
+          ['--color=auto', localPath, repoPath],
           { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] },
         );
         if (output) console.log(output);
