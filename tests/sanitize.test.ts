@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizePlugins, sanitizeMarketplaces } from '../src/core/sanitize.js';
+import { sanitizePlugins, sanitizeMarketplaces, mcpServersHaveEnv } from '../src/core/sanitize.js';
 import type { PluginsData, MarketplacesData } from '../src/core/sanitize.js';
 
 describe('sanitizePlugins', () => {
@@ -140,5 +140,31 @@ describe('sanitizeMarketplaces', () => {
   it('should handle empty object', () => {
     const result = sanitizeMarketplaces({});
     expect(result).toEqual({});
+  });
+});
+
+describe('mcpServersHaveEnv', () => {
+  it('should return true when any server has env field', () => {
+    expect(mcpServersHaveEnv({
+      'a': { command: 'cmd', env: { KEY: 'val' } },
+      'b': { command: 'cmd' },
+    })).toBe(true);
+  });
+
+  it('should return false when no server has env field', () => {
+    expect(mcpServersHaveEnv({
+      'a': { command: 'cmd', args: [] },
+    })).toBe(false);
+  });
+
+  it('should return false for empty object', () => {
+    expect(mcpServersHaveEnv({})).toBe(false);
+  });
+
+  it('should handle non-object server values', () => {
+    expect(mcpServersHaveEnv({
+      'a': 'not-an-object' as unknown,
+      'b': null as unknown,
+    })).toBe(false);
   });
 });

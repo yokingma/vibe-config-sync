@@ -34,4 +34,14 @@ describe('config', () => {
     expect(SYNC_DIRS).toContain('commands');
     expect(SYNC_DIRS).toContain('agents');
   });
+
+  it('CLAUDE_JSON defaults to ~/.claude.json', async () => {
+    const { CLAUDE_JSON } = await import('../src/core/config.js');
+    expect(CLAUDE_JSON).toBe(path.join(os.homedir(), '.claude.json'));
+  });
+
+  it('MCP_SYNC_FILE is mcp-servers.json', async () => {
+    const { MCP_SYNC_FILE } = await import('../src/core/config.js');
+    expect(MCP_SYNC_FILE).toBe('mcp-servers.json');
+  });
 });

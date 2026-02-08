@@ -25,6 +25,12 @@ export interface MarketplaceEntry {
 
 export type MarketplacesData = Record<string, MarketplaceEntry>;
 
+export function mcpServersHaveEnv(servers: Record<string, unknown>): boolean {
+  return Object.values(servers).some(
+    config => typeof config === 'object' && config !== null && 'env' in config,
+  );
+}
+
 export function sanitizePlugins(data: PluginsData): PluginsData {
   const result = structuredClone(data);
   for (const entries of Object.values(result.plugins ?? {})) {

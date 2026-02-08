@@ -1,6 +1,6 @@
 {
   "name": "vibe-config-sync",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Cross-platform CLI tool to sync AI coding tool configurations across machines via git",
   "type": "module",
   "bin": {

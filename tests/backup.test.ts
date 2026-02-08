@@ -2,19 +2,21 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import path from 'node:path';
 import fs from 'fs-extra';
 
-const { mockClaudeHome, mockBackupBase, tmpBase } = vi.hoisted(() => {
+const { mockClaudeHome, mockClaudeJson, mockBackupBase, tmpBase } = vi.hoisted(() => {
   const _path = require('node:path');
   const _os = require('node:os');
   const _tmpBase = _path.join(_os.tmpdir(), `vibe-sync-test-backup-${Date.now()}`);
   return {
     tmpBase: _tmpBase,
     mockClaudeHome: _path.join(_tmpBase, '.claude'),
+    mockClaudeJson: _path.join(_tmpBase, '.claude.json'),
     mockBackupBase: _path.join(_tmpBase, '.vibe-sync', 'backups', 'claude'),
   };
 });
 
 vi.mock('../src/core/config.js', () => ({
   CLAUDE_HOME: mockClaudeHome,
+  CLAUDE_JSON: mockClaudeJson,
   BACKUP_BASE: mockBackupBase,
   SYNC_FILES: ['settings.json', 'CLAUDE.md'],
   SYNC_DIRS: ['commands', 'agents'],
@@ -110,6 +112,20 @@ describe('backup', () => {
       expect(() => restoreFromBackup(backupName)).not.toThrow();
       expect(fs.readJsonSync(path.join(mockClaudeHome, 'settings.json')))
         .toEqual({ partial: true });
+    });
+
+    it('should restore .claude.json from backup', () => {
+      const backupName = '20260101T120000';
+      const backupDir = path.join(mockBackupBase, backupName);
+      fs.ensureDirSync(backupDir);
+      fs.writeJsonSync(path.join(backupDir, '.claude.json'), {
+        mcpServers: { 'test-server': { command: 'test' } },
+      });
+
+      restoreFromBackup(backupName);
+
+      const restored = fs.readJsonSync(mockClaudeJson);
+      expect(restored.mcpServers['test-server'].command).toBe('test');
     });
   });
 });

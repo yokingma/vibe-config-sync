@@ -21,6 +21,7 @@ When using AI coding tools on multiple machines, configurations like skills, com
 | `agents/` | Agent definitions |
 | `plugins/installed_plugins.json` | Plugin registry (machine paths stripped) |
 | `plugins/known_marketplaces.json` | Plugin marketplace sources (machine paths stripped) |
+| `mcp-servers.json` | MCP server configs (extracted from `~/.claude.json`) |
 
 **Not synced** (machine-specific / ephemeral / large): `plugins/cache/`, `projects/`, `telemetry/`, `session-env/`, `plans/`, `todos/`, `debug/`, `history.jsonl`, etc.
 
@@ -82,11 +83,11 @@ vibe-sync pull
 
 ## How It Works
 
-- **Export** copies config files into `~/.vibe-sync/data/`, stripping machine-specific paths from plugin JSON files. Skills that are symlinks are resolved and their actual contents are copied.
+- **Export** copies config files into `~/.vibe-sync/data/`, stripping machine-specific paths from plugin JSON files. Skills that are symlinks are resolved and their actual contents are copied. MCP server configurations are extracted from `~/.claude.json` and saved as `mcp-servers.json` (prompts for confirmation if `env` fields containing potential secrets are detected).
 
-- **Import** restores files from `~/.vibe-sync/data/` to `~/.claude/`, validating JSON structure before overwriting. Plugin JSON files are used as a manifest only (never copied directly) — the `claude` CLI installs plugins and writes correct registry files with local paths. Already-installed plugins are detected and skipped.
+- **Import** restores files from `~/.vibe-sync/data/` to `~/.claude/`, validating JSON structure before overwriting. Plugin JSON files are used as a manifest only (never copied directly) — the `claude` CLI installs plugins and writes correct registry files with local paths. Already-installed plugins are detected and skipped. MCP servers are merged into `~/.claude.json` — only new servers are added; existing servers are never overwritten.
 
-- **Backup** is created automatically at `~/.vibe-sync/backups/claude/<timestamp>/` before every import. Use `vibe-sync restore` to list or recover from backups.
+- **Backup** is created automatically at `~/.vibe-sync/backups/claude/<timestamp>/` before every import. Both `~/.claude/` contents and `~/.claude.json` are backed up. Use `vibe-sync restore` to list or recover from backups.
 
 ## Sync Strategy
 
@@ -118,6 +119,12 @@ In short: new content is added, existing content is overwritten, but nothing is 
 
 Plugin JSON files (`installed_plugins.json`, `known_marketplaces.json`) are exported with machine-specific paths stripped. On import, they are **not** copied to `~/.claude/plugins/` — instead they serve as a manifest. The `claude` CLI is invoked to install each plugin, and it writes correct registry files with local paths as a side effect. Already-installed plugins (detected by `installPath`) are skipped to avoid redundant network operations.
 
+### MCP Servers
+
+MCP server configurations live in `~/.claude.json` under the `mcpServers` key. On export, this section is extracted and saved as `mcp-servers.json` in the sync directory. If any server config contains `env` fields (which may hold secrets like API keys), the user is prompted before exporting.
+
+On import, MCP servers are **additive only** — new servers from the sync repo are added to `~/.claude.json`, but existing servers with the same name are never overwritten. This preserves any machine-specific customizations (e.g., local paths, environment variables).
+
 ### What This Means in Practice
 
 - If both machines modify different configs and then sync, the machine that runs `import` last will lose its local changes (a timestamped backup exists at `~/.vibe-sync/backups/claude/` for manual recovery)
@@ -129,6 +136,7 @@ Plugin JSON files (`installed_plugins.json`, `known_marketplaces.json`) are expo
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `CLAUDE_HOME` | Override Claude config directory | `~/.claude` |
+| `CLAUDE_JSON` | Override Claude global config file (MCP servers) | `~/.claude.json` |
 
 ## License
 

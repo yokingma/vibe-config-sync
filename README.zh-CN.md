@@ -21,6 +21,7 @@
 | `agents/` | 代理定义 |
 | `plugins/installed_plugins.json` | 插件注册表（已剥离机器路径） |
 | `plugins/known_marketplaces.json` | 插件市场来源（已剥离机器路径） |
+| `mcp-servers.json` | MCP 服务器配置（从 `~/.claude.json` 提取） |
 
 **不同步**（机器特定 / 临时 / 大文件）：`plugins/cache/`、`projects/`、`telemetry/`、`session-env/`、`plans/`、`todos/`、`debug/`、`history.jsonl` 等。
 
@@ -82,11 +83,11 @@ vibe-sync pull
 
 ## 工作原理
 
-- **导出**：将配置文件复制到 `~/.vibe-sync/data/`，同时从插件 JSON 文件中剥离机器特定路径。符号链接的技能会被解析并复制其实际内容。
+- **导出**：将配置文件复制到 `~/.vibe-sync/data/`，同时从插件 JSON 文件中剥离机器特定路径。符号链接的技能会被解析并复制其实际内容。MCP 服务器配置从 `~/.claude.json` 中提取并保存为 `mcp-servers.json`（如果检测到包含潜在密钥的 `env` 字段，会提示用户确认）。
 
-- **导入**：从 `~/.vibe-sync/data/` 恢复文件到 `~/.claude/`，在覆盖前验证 JSON 结构。插件 JSON 文件仅作为清单使用（不会直接复制）—— `claude` CLI 负责安装插件并写入包含本地路径的正确注册文件。已安装的插件会被检测并跳过。
+- **导入**：从 `~/.vibe-sync/data/` 恢复文件到 `~/.claude/`，在覆盖前验证 JSON 结构。插件 JSON 文件仅作为清单使用（不会直接复制）—— `claude` CLI 负责安装插件并写入包含本地路径的正确注册文件。已安装的插件会被检测并跳过。MCP 服务器以增量方式合并到 `~/.claude.json`——仅添加新服务器，已存在的服务器不会被覆盖。
 
-- **备份**：每次导入前自动在 `~/.vibe-sync/backups/claude/<timestamp>/` 创建备份。使用 `vibe-sync restore` 列出或恢复备份。
+- **备份**：每次导入前自动在 `~/.vibe-sync/backups/claude/<timestamp>/` 创建备份，同时备份 `~/.claude/` 内容和 `~/.claude.json`。使用 `vibe-sync restore` 列出或恢复备份。
 
 ## 同步策略
 
@@ -118,6 +119,12 @@ vibe-sync pull
 
 插件 JSON 文件（`installed_plugins.json`、`known_marketplaces.json`）在导出时会剥离机器特定路径。导入时**不会**复制到 `~/.claude/plugins/`——而是作为清单使用。`claude` CLI 被调用来安装每个插件，并在安装过程中写入包含本地路径的正确注册文件。已安装的插件（通过 `installPath` 检测）会被跳过，以避免冗余的网络操作。
 
+### MCP 服务器
+
+MCP 服务器配置存储在 `~/.claude.json` 的 `mcpServers` 键下。导出时，该部分被提取并保存为同步目录中的 `mcp-servers.json`。如果任何服务器配置包含 `env` 字段（可能包含 API 密钥等密钥），导出前会提示用户确认。
+
+导入时，MCP 服务器采用**仅增量**策略——同步仓库中的新服务器会被添加到 `~/.claude.json`，但同名的已有服务器不会被覆盖。这保留了机器特定的自定义配置（如本地路径、环境变量）。
+
 ### 实际影响
 
 - 如果两台机器修改了不同的配置然后同步，最后执行 `import` 的机器会丢失其本地更改（可在 `~/.vibe-sync/backups/claude/` 找到带时间戳的备份进行手动恢复）
@@ -129,6 +136,7 @@ vibe-sync pull
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `CLAUDE_HOME` | 覆盖 Claude 配置目录 | `~/.claude` |
+| `CLAUDE_JSON` | 覆盖 Claude 全局配置文件（MCP 服务器） | `~/.claude.json` |
 
 ## 许可证
 

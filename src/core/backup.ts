@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'node:path';
-import { CLAUDE_HOME, BACKUP_BASE, SYNC_FILES, SYNC_DIRS, PLUGIN_FILES } from './config.js';
+import { CLAUDE_HOME, CLAUDE_JSON, BACKUP_BASE, SYNC_FILES, SYNC_DIRS, PLUGIN_FILES } from './config.js';
 import { logInfo, logOk } from './logger.js';
 
 export function backupExisting(): void {
@@ -37,6 +37,11 @@ export function backupExisting(): void {
     if (fs.existsSync(src)) {
       fs.copySync(src, path.join(backupDir, 'plugins', file));
     }
+  }
+
+  // Backup ~/.claude.json
+  if (fs.existsSync(CLAUDE_JSON)) {
+    fs.copySync(CLAUDE_JSON, path.join(backupDir, '.claude.json'));
   }
 
   logOk(`Backup created: ${backupDir}`);
@@ -97,6 +102,13 @@ export function restoreFromBackup(backupName: string): void {
         logInfo(`Restored: plugins/${file}`);
       }
     }
+  }
+
+  // Restore ~/.claude.json
+  const claudeJsonSrc = path.join(backupDir, '.claude.json');
+  if (fs.existsSync(claudeJsonSrc)) {
+    fs.copySync(claudeJsonSrc, CLAUDE_JSON);
+    logInfo('Restored: .claude.json');
   }
 
   logOk(`Restored from backup: ${backupName}`);

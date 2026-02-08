@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'node:path';
-import { CLAUDE_HOME, getConfigDir, SYNC_FILES, SYNC_DIRS, PLUGIN_FILES } from '../core/config.js';
+import { CLAUDE_HOME, CLAUDE_JSON, MCP_SYNC_FILE, getConfigDir, SYNC_FILES, SYNC_DIRS, PLUGIN_FILES } from '../core/config.js';
 import { logInfo, logOk, logWarn } from '../core/logger.js';
 import { backupExisting } from '../core/backup.js';
 import { importSkills } from '../core/skills.js';
@@ -119,6 +119,60 @@ function importSyncSkills(configDir: string, dryRun: boolean): void {
   }
 }
 
+function readLocalMcpServers(): { json: Record<string, unknown>; servers: Record<string, unknown> } {
+  const json = readJsonSafe<Record<string, unknown>>(CLAUDE_JSON) ?? {};
+  const mcpServers = json.mcpServers;
+  const servers = (typeof mcpServers === 'object' && mcpServers !== null)
+    ? mcpServers as Record<string, unknown>
+    : {};
+  return { json, servers };
+}
+
+function importMcpServers(configDir: string, dryRun: boolean): void {
+  const src = path.join(configDir, MCP_SYNC_FILE);
+  if (!fs.existsSync(src)) return;
+
+  const result = validateJsonFile(src);
+  if (!result.valid) {
+    logWarn(dryRun ? `  INVALID: ${result.errors.join(', ')}` : `Skipping ${MCP_SYNC_FILE}: ${result.errors.join(', ')}`);
+    return;
+  }
+  if (dryRun) logOk(`  Validated: ${MCP_SYNC_FILE}`);
+
+  const syncedServers = readJsonSafe<Record<string, unknown>>(src);
+  if (!syncedServers) return;
+
+  const { json: existing, servers: currentServers } = readLocalMcpServers();
+  const syncedNames = Object.keys(syncedServers);
+  const newNames = syncedNames.filter(n => !(n in currentServers));
+
+  if (dryRun) {
+    const skipNames = syncedNames.filter(n => n in currentServers);
+    if (newNames.length > 0) logInfo(`Would import MCP servers: ${newNames.join(', ')}`);
+    if (skipNames.length > 0) logWarn(`Would skip (already exist): ${skipNames.join(', ')}`);
+    if (newNames.length === 0) logInfo('No new MCP servers to import');
+    return;
+  }
+
+  if (newNames.length === 0) {
+    logInfo('No new MCP servers to import (all already exist locally)');
+    return;
+  }
+
+  for (const name of syncedNames) {
+    if (name in currentServers) {
+      logWarn(`MCP server already exists locally, skipping: ${name}`);
+    }
+  }
+
+  const newServers = Object.fromEntries(
+    newNames.map(name => [name, syncedServers[name]]),
+  );
+  existing.mcpServers = { ...currentServers, ...newServers };
+  fs.writeJsonSync(CLAUDE_JSON, existing, { spaces: 2 });
+  logInfo(`Imported: ${MCP_SYNC_FILE} → ~/.claude.json (added ${newNames.length} new server(s))`);
+}
+
 function syncPlugins(
   configDir: string,
   existingState: ExistingPluginState,
@@ -185,6 +239,7 @@ export function cmdImport(options: ImportOptions = {}): void {
   importSyncFiles(configDir, options);
   importSyncDirs(configDir, dryRun);
   importSyncSkills(configDir, dryRun);
+  importMcpServers(configDir, dryRun);
 
   if (options.reinstallPlugins) {
     syncPlugins(configDir, existingState, dryRun);
