@@ -6,7 +6,6 @@ import {
   validateJsonFile,
   validateSettingsJson,
   validatePluginsJson,
-  validateMarketplacesJson,
 } from '../src/core/validate.js';
 
 describe('validate', () => {
@@ -91,14 +90,6 @@ describe('validate', () => {
       const result = validatePluginsJson(f);
       expect(result.valid).toBe(false);
       expect(result.errors[0]).toContain('plugins must be an object');
-    });
-  });
-
-  describe('validateMarketplacesJson', () => {
-    it('should accept a valid object', () => {
-      const f = path.join(tmpDir, 'mkt.json');
-      fs.writeJsonSync(f, { official: { source: { source: 'github' } } });
-      expect(validateMarketplacesJson(f)).toMatchObject({ valid: true, errors: [] });
     });
   });
 });

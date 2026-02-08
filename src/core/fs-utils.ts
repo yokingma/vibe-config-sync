@@ -27,8 +27,11 @@ export function readJsonSafe<T = unknown>(filePath: string): T | null {
     return fs.readJsonSync(filePath) as T;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== 'ENOENT') {
-      logWarn(`Failed to parse ${filePath}: ${(err as Error).message}`);
+    if (code === 'ENOENT') return null;
+    if (err instanceof SyntaxError) {
+      logWarn(`Failed to parse JSON ${filePath}: ${err.message}`);
+    } else {
+      logWarn(`Failed to read ${filePath}: ${(err as Error).message}`);
     }
     return null;
   }

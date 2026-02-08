@@ -1,12 +1,11 @@
 import { listBackups, restoreFromBackup } from '../core/backup.js';
-import { logInfo, logError } from '../core/logger.js';
+import { logInfo } from '../core/logger.js';
 
 export function cmdRestore(timestamp?: string): void {
   const backups = listBackups();
 
   if (backups.length === 0) {
-    logError('No backups found. Run "vibe-sync import" first to create a backup.');
-    return;
+    throw new Error('No backups found. Run "vibe-sync import" first to create a backup.');
   }
 
   if (!timestamp) {
@@ -22,8 +21,7 @@ export function cmdRestore(timestamp?: string): void {
   }
 
   if (!backups.includes(timestamp)) {
-    logError(`Backup not found: ${timestamp}`);
-    return;
+    throw new Error(`Backup not found: ${timestamp}`);
   }
 
   restoreFromBackup(timestamp);

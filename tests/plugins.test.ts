@@ -3,10 +3,8 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'fs-extra';
 
-const mockExecFileSync = vi.fn();
 const mockSpawnSync = vi.fn();
 vi.mock('node:child_process', () => ({
-  execFileSync: (...args: unknown[]) => mockExecFileSync(...args),
   spawnSync: (...args: unknown[]) => mockSpawnSync(...args),
 }));
 
@@ -18,9 +16,7 @@ describe('reinstallPlugins', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // isClaudeAvailable uses execFileSync — default to success
-    mockExecFileSync.mockReturnValue(Buffer.from('1.0.0'));
-    // spawnSync default: success
+    // spawnSync default: success (covers both isClaudeAvailable and execClaude)
     mockSpawnSync.mockReturnValue({ status: 0, error: null });
 
     tmpDir = path.join(os.tmpdir(), `vibe-sync-test-plugins-${Date.now()}`);
@@ -42,13 +38,16 @@ describe('reinstallPlugins', () => {
     const { reinstallPlugins } = await import('../src/core/plugins.js');
     reinstallPlugins(marketplacesFile, pluginsFile, settingsFile);
 
-    expect(mockExecFileSync).toHaveBeenCalledWith(
+    expect(mockSpawnSync).toHaveBeenCalledWith(
       'claude', ['--version'],
-      expect.objectContaining({ timeout: 5_000 }),
+      expect.objectContaining({ stdio: 'pipe', timeout: 5_000 }),
     );
   });
 
   it('should not crash when spawnSync times out', async () => {
+    // First call (isClaudeAvailable --version) succeeds
+    mockSpawnSync.mockReturnValueOnce({ status: 0, error: null });
+    // Subsequent calls (plugin commands) time out
     mockSpawnSync.mockReturnValue({
       status: null,
       error: Object.assign(new Error('ETIMEDOUT'), { code: 'ETIMEDOUT' }),
@@ -66,8 +65,8 @@ describe('reinstallPlugins', () => {
     }).not.toThrow();
   });
 
-  it('should skip all phases when claude CLI is not available', async () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error('not found'); });
+  it('should throw when claude CLI is not available', async () => {
+    mockSpawnSync.mockReturnValueOnce({ status: 1, error: null });
 
     fs.writeJsonSync(marketplacesFile, {
       official: { source: { source: 'github', repo: 'test/repo' } },
@@ -78,10 +77,11 @@ describe('reinstallPlugins', () => {
     fs.writeJsonSync(settingsFile, { enabledPlugins: { 'test-plugin': true } });
 
     const { reinstallPlugins } = await import('../src/core/plugins.js');
-    reinstallPlugins(marketplacesFile, pluginsFile, settingsFile);
+    expect(() => {
+      reinstallPlugins(marketplacesFile, pluginsFile, settingsFile);
+    }).toThrow('claude CLI not found');
 
-    expect(mockExecFileSync).toHaveBeenCalledTimes(1);
-    expect(mockSpawnSync).not.toHaveBeenCalled();
+    expect(mockSpawnSync).toHaveBeenCalledTimes(1);
   });
 
   it('should call plugin install with 120s timeout', async () => {

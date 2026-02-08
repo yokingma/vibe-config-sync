@@ -3,7 +3,7 @@ import path from 'node:path';
 import { CLAUDE_HOME, BACKUP_BASE, SYNC_FILES, SYNC_DIRS, PLUGIN_FILES } from './config.js';
 import { logInfo, logOk } from './logger.js';
 
-export function backupExisting(): string {
+export function backupExisting(): void {
   const timestamp = new Date()
     .toISOString()
     .replace(/[-:T]/g, '')
@@ -31,16 +31,15 @@ export function backupExisting(): string {
   }
 
   const pluginsDir = path.join(CLAUDE_HOME, 'plugins');
+  fs.ensureDirSync(path.join(backupDir, 'plugins'));
   for (const file of PLUGIN_FILES) {
     const src = path.join(pluginsDir, file);
     if (fs.existsSync(src)) {
-      fs.ensureDirSync(path.join(backupDir, 'plugins'));
       fs.copySync(src, path.join(backupDir, 'plugins', file));
     }
   }
 
   logOk(`Backup created: ${backupDir}`);
-  return backupDir;
 }
 
 export function listBackups(): string[] {
@@ -53,7 +52,7 @@ export function listBackups(): string[] {
 }
 
 export function restoreFromBackup(backupName: string): void {
-  if (!backupName || backupName.includes('/') || backupName.includes('\\') || backupName.includes('..')) {
+  if (!backupName || backupName.includes('/') || backupName.includes('\\')) {
     throw new Error(`Invalid backup name: ${backupName}`);
   }
   const backupDir = path.join(BACKUP_BASE, backupName);

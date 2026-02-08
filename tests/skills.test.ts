@@ -80,4 +80,16 @@ describe('importSkills', () => {
     importSkills('/nonexistent/path', IMPORT_DIR);
     // Should not throw
   });
+
+  it('should remove .DS_Store files from imported skill dirs', () => {
+    const skillDir = path.join(DEST_DIR, 'my-skill');
+    fs.ensureDirSync(skillDir);
+    fs.writeFileSync(path.join(skillDir, '.DS_Store'), '');
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '# Skill');
+
+    importSkills(DEST_DIR, IMPORT_DIR);
+
+    expect(fs.existsSync(path.join(IMPORT_DIR, 'my-skill', '.DS_Store'))).toBe(false);
+    expect(fs.existsSync(path.join(IMPORT_DIR, 'my-skill', 'SKILL.md'))).toBe(true);
+  });
 });

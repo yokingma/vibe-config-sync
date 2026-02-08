@@ -8,6 +8,12 @@ import { exportSkills } from '../core/skills.js';
 import type { PluginsData, MarketplacesData } from '../core/sanitize.js';
 
 export function cmdExport(): void {
+  if (!fs.existsSync(CLAUDE_HOME)) {
+    throw new Error(
+      `Claude config directory not found: ${CLAUDE_HOME}\nMake sure Claude Code has been run at least once.`,
+    );
+  }
+
   const configDir = getConfigDir();
   const pluginsDir = path.join(configDir, 'plugins');
   fs.ensureDirSync(pluginsDir);

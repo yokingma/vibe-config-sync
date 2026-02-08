@@ -14,7 +14,7 @@ const program = new Command();
 program
   .name('vibe-sync')
   .description('Sync AI coding tool configurations across machines via git')
-  .version('0.2.3')
+  .version('0.2.4')
   .action(async () => {
     if (!isInitialized()) {
       await cmdInit();

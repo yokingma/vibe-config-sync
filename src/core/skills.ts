@@ -48,7 +48,7 @@ export function importSkills(srcDir: string, destDir: string): void {
     if (entry.isDirectory()) {
       const src = path.join(srcDir, entry.name);
       const dest = path.join(destDir, entry.name);
-      fs.copySync(src, dest, { overwrite: true });
+      copyDirClean(src, dest);
       logInfo(`Imported skill: ${entry.name}`);
     }
   }

@@ -7,59 +7,54 @@ function readNormalized(filePath: string): string {
   return fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
 }
 
-function filesEqual(a: string, b: string): boolean {
-  return readNormalized(a) === readNormalized(b);
-}
-
 function dirsEqual(a: string, b: string): boolean {
   const aEntries = fs.readdirSync(a).sort();
   const bEntries = fs.readdirSync(b).sort();
   if (aEntries.length !== bEntries.length) return false;
+
   for (let i = 0; i < aEntries.length; i++) {
     if (aEntries[i] !== bEntries[i]) return false;
     const aPath = path.join(a, aEntries[i]);
     const bPath = path.join(b, bEntries[i]);
-    const aStat = fs.statSync(aPath);
-    const bStat = fs.statSync(bPath);
-    if (aStat.isDirectory() !== bStat.isDirectory()) return false;
-    const equal = aStat.isDirectory()
-      ? dirsEqual(aPath, bPath)
-      : filesEqual(aPath, bPath);
-    if (!equal) return false;
+    try {
+      const aStat = fs.statSync(aPath);
+      const bStat = fs.statSync(bPath);
+      if (aStat.isDirectory() !== bStat.isDirectory()) return false;
+      const equal = aStat.isDirectory()
+        ? dirsEqual(aPath, bPath)
+        : readNormalized(aPath) === readNormalized(bPath);
+      if (!equal) return false;
+    } catch {
+      return false;
+    }
   }
   return true;
 }
 
-function colorDiff(patch: string): string {
-  return patch
-    .split('\n')
-    .map((line) => {
-      if (line.startsWith('+')) return pc.green(line);
-      if (line.startsWith('-')) return pc.red(line);
-      if (line.startsWith('@@')) return pc.cyan(line);
-      return line;
-    })
-    .join('\n');
+function colorDiffLine(line: string): string {
+  if (line.startsWith('@@')) return pc.cyan(line);
+  if (line.startsWith('+')) return pc.green(line);
+  if (line.startsWith('-')) return pc.red(line);
+  return line;
 }
 
 export function showDiff(localPath: string, repoPath: string, label: string): boolean {
-  if (!fs.existsSync(localPath) && !fs.existsSync(repoPath)) {
-    return false;
-  }
+  const localExists = fs.existsSync(localPath);
+  const repoExists = fs.existsSync(repoPath);
 
-  if (!fs.existsSync(localPath)) {
+  if (!localExists && !repoExists) return false;
+
+  if (!localExists) {
     console.log(pc.yellow(`  ${label}: exists in repo but not locally`));
     return true;
   }
 
-  if (!fs.existsSync(repoPath)) {
+  if (!repoExists) {
     console.log(pc.yellow(`  ${label}: exists locally but not in repo`));
     return true;
   }
 
-  const isDir = fs.statSync(localPath).isDirectory();
-
-  if (isDir) {
+  if (fs.statSync(localPath).isDirectory()) {
     if (dirsEqual(localPath, repoPath)) return false;
     console.log(pc.yellow(`  ${label}: differs`));
     return true;
@@ -74,6 +69,6 @@ export function showDiff(localPath: string, repoPath: string, label: string): bo
     `local/${label}`, `repo/${label}`,
     localContent, repoContent,
   );
-  console.log(colorDiff(patch));
+  console.log(patch.split('\n').map(colorDiffLine).join('\n'));
   return true;
 }

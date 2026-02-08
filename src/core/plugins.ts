@@ -1,5 +1,5 @@
-import { execFileSync, spawnSync } from 'node:child_process';
-import { logInfo, logOk, logWarn, logError } from './logger.js';
+import { spawnSync } from 'node:child_process';
+import { logInfo, logOk, logWarn } from './logger.js';
 import { readJsonSafe } from './fs-utils.js';
 import type { PluginsData, MarketplacesData } from './sanitize.js';
 
@@ -36,12 +36,8 @@ function execClaude(args: string[]): boolean {
 }
 
 function isClaudeAvailable(): boolean {
-  try {
-    execFileSync('claude', ['--version'], { stdio: 'pipe', timeout: 5_000, shell: true });
-    return true;
-  } catch {
-    return false;
-  }
+  const result = spawnSync('claude', ['--version'], { stdio: 'pipe', timeout: 5_000, shell: true });
+  return result.status === 0;
 }
 
 export function reinstallPlugins(
@@ -51,8 +47,7 @@ export function reinstallPlugins(
   existingState?: ExistingPluginState,
 ): void {
   if (!isClaudeAvailable()) {
-    logError('claude CLI not found. Cannot reinstall plugins.');
-    return;
+    throw new Error('claude CLI not found. Cannot reinstall plugins.');
   }
 
   // Phase 1: Add marketplaces

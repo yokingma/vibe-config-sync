@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { CLAUDE_HOME, getConfigDir, SYNC_FILES, SYNC_DIRS } from '../core/config.js';
+import { CLAUDE_HOME, getConfigDir, SYNC_FILES, SYNC_DIRS, PLUGIN_FILES } from '../core/config.js';
 import { logOk } from '../core/logger.js';
 import { showDiff } from '../core/diff.js';
 
@@ -33,7 +33,7 @@ export function cmdStatus(): void {
   }
 
   // Compare plugin registries
-  for (const file of ['installed_plugins.json', 'known_marketplaces.json']) {
+  for (const file of PLUGIN_FILES) {
     const local = path.join(CLAUDE_HOME, 'plugins', file);
     const repo = path.join(configDir, 'plugins', file);
     if (showDiff(local, repo, `plugins/${file}`)) {

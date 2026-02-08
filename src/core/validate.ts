@@ -50,7 +50,3 @@ export function validatePluginsJson(filePath: string): ValidationResult {
   }
   return ok(data);
 }
-
-export function validateMarketplacesJson(filePath: string): ValidationResult {
-  return validateJsonFile(filePath);
-}
