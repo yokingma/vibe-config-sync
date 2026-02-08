@@ -55,12 +55,21 @@ export async function pullFromRemote(git: SimpleGit): Promise<void> {
   }
 
   const branch = (await git.branchLocal()).current || 'main';
+
   try {
     await git.pull();
   } catch {
-    // Fallback: branch may not have upstream tracking set
-    await git.pull('origin', branch);
-    await git.branch(['--set-upstream-to=origin/' + branch, branch]);
+    try {
+      // Fallback: branch may not have upstream tracking set
+      await git.pull('origin', branch);
+      await git.branch(['--set-upstream-to=origin/' + branch, branch]);
+    } catch {
+      // Fallback: untracked files or merge conflicts — fetch and reset to remote
+      logWarn('Merge conflict detected, resetting to remote version');
+      await git.fetch('origin', branch);
+      await git.reset(['--hard', `origin/${branch}`]);
+      await git.branch(['--set-upstream-to=origin/' + branch, branch]);
+    }
   }
   logOk('Pulled from remote');
 }

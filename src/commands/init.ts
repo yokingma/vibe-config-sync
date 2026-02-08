@@ -74,12 +74,6 @@ export async function cmdInit(): Promise<void> {
 
     fs.ensureDirSync(SYNC_DIR);
 
-    // Create .gitignore
-    fs.writeFileSync(
-      path.join(SYNC_DIR, '.gitignore'),
-      '.DS_Store\nThumbs.db\n',
-    );
-
     const git = createGit(SYNC_DIR);
     await git.init();
     logOk('Initialized git repository');
@@ -100,6 +94,12 @@ export async function cmdInit(): Promise<void> {
       } catch {
         logInfo('No existing data on remote (new repository)');
       }
+    }
+
+    // Create .gitignore only if not pulled from remote
+    const gitignorePath = path.join(SYNC_DIR, '.gitignore');
+    if (!fs.existsSync(gitignorePath)) {
+      fs.writeFileSync(gitignorePath, '.DS_Store\nThumbs.db\n');
     }
 
     console.log('');
