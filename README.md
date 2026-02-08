@@ -1,5 +1,7 @@
 # vibe-config-sync
 
+**English** | [中文文档](README.zh-CN.md)
+
 > **Command:** `vibe-sync`
 
 Sync AI coding tool configurations across machines via Git. Currently supports Claude Code (`~/.claude/`).

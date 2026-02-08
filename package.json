@@ -27,6 +27,15 @@
     "config",
     "cli"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yokingma/vibe-config-sync.git"
+  },
+  "homepage": "https://github.com/yokingma/vibe-config-sync#readme",
+  "bugs": {
+    "url": "https://github.com/yokingma/vibe-config-sync/issues"
+  },
+  "author": "yokingma",
   "license": "MIT",
   "dependencies": {
     "commander": "^13.1.0",
