@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import readline from 'node:readline/promises';
 import { SYNC_DIR, isInitialized } from '../core/config.js';
-import { createGit, hasRemote } from '../core/git.js';
+import { createGit } from '../core/git.js';
 import { logInfo, logOk, logWarn, logError } from '../core/logger.js';
 
 function createReadline() {
@@ -87,13 +87,15 @@ export async function cmdInit(): Promise<void> {
     await git.addRemote('origin', trimmedUrl);
     logOk(`Remote added: ${trimmedUrl}`);
 
-    // Try to pull existing data
+    // Try to pull existing data and set up branch tracking
     try {
       await git.pull('origin', 'main');
+      await git.branch(['--set-upstream-to=origin/main', 'main']);
       logOk('Pulled existing data from remote');
     } catch {
       try {
         await git.pull('origin', 'master');
+        await git.branch(['--set-upstream-to=origin/master', 'master']);
         logOk('Pulled existing data from remote');
       } catch {
         logInfo('No existing data on remote (new repository)');

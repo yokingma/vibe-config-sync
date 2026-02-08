@@ -53,6 +53,14 @@ export async function pullFromRemote(git: SimpleGit): Promise<void> {
   if (!(await hasRemote(git))) {
     throw new Error('No remote configured. Run: git remote add origin <url>');
   }
-  await git.pull();
+
+  const branch = (await git.branchLocal()).current || 'main';
+  try {
+    await git.pull();
+  } catch {
+    // Fallback: branch may not have upstream tracking set
+    await git.pull('origin', branch);
+    await git.branch(['--set-upstream-to=origin/' + branch, branch]);
+  }
   logOk('Pulled from remote');
 }
